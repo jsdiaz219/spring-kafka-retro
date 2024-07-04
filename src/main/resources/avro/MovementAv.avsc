@@ -1,0 +1,19 @@
+{
+   "type":"record",
+   "name":"MovementAv",
+   "namespace":"com.scanntech.diticketsretropersonal.avro",
+   "fields":[
+      {
+         "name":"commercialDate",
+         "type":"string"
+      },
+      {
+         "name":"company",
+         "type":"int"
+      },
+      {
+         "name":"store",
+         "type":"int"
+      }
+   ]
+}
