@@ -23,19 +23,19 @@ public class ReprocessDataDto {
     }
 
     public String getMonth() {
-        return month != null ? String.valueOf(month) : ".*";
+        return month != null ? String.valueOf(month) : "*";
     }
 
     public String getYear() {
-        return year != null ? String.valueOf(year) : ".*";
+        return year != null ? String.valueOf(year) : "*";
     }
 
     public String getCompany() {
-        return company != null ? String.valueOf(company) : ".*";
+        return company != null ? String.valueOf(company) : "*";
     }
 
     public String getStore() {
-        return store != null ? String.valueOf(store): ".*";
+        return store != null ? String.valueOf(store): "*";
     }
 
     public String toRegexString(MovementStatus status) {

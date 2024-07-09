@@ -1,13 +1,13 @@
 package com.scanntech.diticketsretropersonal.dto;
 
 public enum MovementStatus {
-    PENDING("pendiente"),
-    PROCESSED("finalizado"),
-    ERROR("error");
+    PENDING("PENDING"),
+    PROCESSED("FINISHED"),
+    ERROR("ERROR");
 
     private final String value;
 
-    private MovementStatus(String value) {
+    MovementStatus(String value) {
         this.value = value;
     }
 

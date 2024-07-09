@@ -3,51 +3,118 @@ package com.scanntech.diticketsretropersonal.service;
 import com.scanntech.diticketsretropersonal.avro.MovementAv;
 import com.scanntech.diticketsretropersonal.dto.MovementStatus;
 import com.scanntech.diticketsretropersonal.dto.ReprocessDataDto;
+import com.scanntech.diticketsretropersonal.kafka.KafkaProducerService;
+import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
+import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileVisitOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.regex.Matcher;
 
 @Service
 public class TicketsRetroService {
-    private static final Logger log = LoggerFactory.getLogger(TicketsRetroService.class);
+
+    private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(TicketsRetroService.class);
+
     private static final String dir = System.getProperty("user.dir");
 
     private final String baseDir;
 
-    public TicketsRetroService(@Value("${movements.base-dir:NONE}") String baseDir) {
+    private final KafkaProducerService producer;
+
+    public TicketsRetroService(@Value("${movements.base-dir:NONE}") String baseDir, KafkaProducerService producer) {
         this.baseDir = baseDir.equals("NONE") ? dir + "/local-data/" : baseDir;
+        this.producer = producer;
     }
 
-    public List<Path> reprocess(ReprocessDataDto reprocessDataDto) throws IOException {
+    public void reprocess(ReprocessDataDto reprocessDataDto) throws IOException {
         String pathRegex = reprocessDataDto.toRegexString(MovementStatus.PENDING);
-        log.info("adentro");
-        return this.findFiles(pathRegex);
+        log.info("Looking for files with regex: %s".formatted(pathRegex));
+        List<Path> foundFiles = findFiles(this.baseDir, pathRegex);
+        log.info("Found %d files".formatted(foundFiles.size()));
+
+        List<MovementAv> movements = new ArrayList<>();
+        for (Path path: foundFiles) {
+            File file = path.toFile();
+            movements.addAll(readMovementsFromFile(file));
+        }
+
+        this.publishAllMovements(movements);
     }
 
-    private List<Path> findFiles(String pathRegex) throws IOException {
-        Pattern pattern = Pattern.compile(pathRegex);
-        try (Stream<Path> files = Files.walk(Paths.get(this.baseDir), FileVisitOption.FOLLOW_LINKS)) {
-            return files
-                    .filter(Files::isRegularFile)
-                    .filter(path -> pattern.matcher(path.toString()).matches())
-                    .collect(Collectors.toList());
+    private void publishAllMovements(List<MovementAv> movements) {
+        for (MovementAv movement: movements) {
+            try {
+                this.producer.sendMessage(movement);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
+    }
+
+    private List<MovementAv> readMovementsFromFile(File file) throws IOException {
+        List<MovementAv> movements = new ArrayList<>();
+        DatumReader<MovementAv> userDatumReader = new SpecificDatumReader<>(MovementAv.class);
+        try (DataFileReader<MovementAv> dataFileReader = new DataFileReader<>(file, userDatumReader)) {
+            MovementAv movementAv = null;
+            while (dataFileReader.hasNext()) {
+                movementAv = dataFileReader.next(movementAv);
+                movements.add(movementAv);
+            }
+        }
+
+        return movements;
+    }
+
+
+    public static List<Path> findFiles(String baseDir, String pattern) throws IOException {
+        List<Path> result = new ArrayList<>();
+        Path basePath = Paths.get(baseDir);
+        PathMatcher matcher = createPathMatcher(pattern);
+
+        Files.walkFileTree(basePath, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                Path relativePath = basePath.relativize(file);
+                if (matcher.matches(relativePath)) {
+                    result.add(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+
+        return result;
+    }
+
+    private static PathMatcher createPathMatcher(String pattern) {
+        // Reemplaza los '*' con el patrón adecuado de regex
+        String regexPattern = pattern
+                .replace("**", ".*")
+                .replace("*", "[^/]*");
+
+        // Agrega los delimitadores de inicio y fin de la cadena
+        regexPattern = "^" + regexPattern + "$";
+
+        Pattern compiledPattern = Pattern.compile(regexPattern);
+
+        return path -> {
+            Matcher matcher = compiledPattern.matcher(path.toString());
+            return matcher.matches();
+        };
     }
 
     public void saveNewMovements(List<MovementAv> movements) {
@@ -56,7 +123,7 @@ public class TicketsRetroService {
 
             for (Map.Entry<String, List<MovementAv>> entry: groupedMovements.entrySet()) {
                 log.info(entry.getValue().toString());
-                writeToFile(entry.getValue(), ("%s/local-data/%s").formatted(baseDir, entry.getKey()));
+                writeToFile(entry.getValue(), baseDir + entry.getKey());
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
