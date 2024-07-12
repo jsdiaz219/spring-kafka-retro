@@ -2,9 +2,9 @@ spring:
   application:
     name: avro-tutorial
 kafka:
-  retro-topic: trn-pendientes-descartar
-  reprocess-topic: trn-pendientes-bkppgiposbr14-test-retro
-  bootstrap-servers: 192.168.1.156:9092
+  retro-topic: ${KAFKA_RETRO_TOPIC:trn-tickets-retro}
+  reprocess-topic: ${KAFKA_REPROCESS_TOPIC:trn-tickets-retro-reprocess}
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   consumer:
     concurrency: 3
     poll-timeout: 3000
