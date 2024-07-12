@@ -1,7 +1,6 @@
 package com.scanntech.diticketsretropersonal.kafka;
 
 import com.scanntech.di.commons.kafka.avro.model.TransaccionPendienteAv;
-import com.scanntech.diticketsretropersonal.avro.AvroDeserializer;
 import com.scanntech.diticketsretropersonal.dto.MovementStatus;
 import com.scanntech.diticketsretropersonal.repository.IMovementsRepo;
 import com.scanntech.diticketsretropersonal.util.MovementsUtil;
@@ -17,7 +16,7 @@ import java.io.IOException;
 import java.util.List;
 
 @Component
-public class CustomProducerListener implements ProducerListener<String, byte[]> {
+public class CustomProducerListener implements ProducerListener<String, TransaccionPendienteAv> {
 
     private static final Logger log = LogManager.getLogger(CustomProducerListener.class);
     private final IMovementsRepo repo;
@@ -27,7 +26,7 @@ public class CustomProducerListener implements ProducerListener<String, byte[]> 
     }
 
     @Override
-    public void onSuccess(ProducerRecord<String, byte[]> producerRecord, RecordMetadata recordMetadata) {
+    public void onSuccess(ProducerRecord<String, TransaccionPendienteAv> producerRecord, RecordMetadata recordMetadata) {
         log.info("Producer record sent successfully: {}", producerRecord);
         try {
             this.saveToStatus(MovementStatus.PROCESSED, producerRecord);
@@ -37,7 +36,7 @@ public class CustomProducerListener implements ProducerListener<String, byte[]> 
     }
 
     @Override
-    public void onError(ProducerRecord<String, byte[]> producerRecord, @Nullable RecordMetadata recordMetadata, Exception exception) {
+    public void onError(ProducerRecord<String, TransaccionPendienteAv> producerRecord, @Nullable RecordMetadata recordMetadata, Exception exception) {
         try {
             log.error("Producer record failed to send: {}", exception.getMessage());
             this.saveToStatus(MovementStatus.ERROR, producerRecord);
@@ -46,13 +45,8 @@ public class CustomProducerListener implements ProducerListener<String, byte[]> 
         }
     }
 
-    private TransaccionPendienteAv deserialize(ProducerRecord<String, byte[]> producerRecord) {
-        AvroDeserializer<TransaccionPendienteAv> deserializer = new AvroDeserializer<>(TransaccionPendienteAv.class);
-        return deserializer.deserialize(producerRecord.topic(), producerRecord.value());
-    }
-
-    private void saveToStatus(MovementStatus status, ProducerRecord<String, byte[]> producerRecord) throws IOException {
-        TransaccionPendienteAv movementAv = this.deserialize(producerRecord);
+    private void saveToStatus(MovementStatus status, ProducerRecord<String, TransaccionPendienteAv> producerRecord) throws IOException {
+        TransaccionPendienteAv movementAv = producerRecord.value();
         String key = MovementsUtil.generateMovementKey(movementAv, status);
         repo.saveManyMovementsToFile(key, List.of(movementAv));
     }
