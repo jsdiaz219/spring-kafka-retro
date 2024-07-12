@@ -36,8 +36,7 @@ public class KafkaProducerService {
         writer.write(message, encoder);
         encoder.flush();
         outputStream.close();
-
-        kafkaTemplate.send(new ProducerRecord<>(REPROCESS_TOPIC, outputStream.toByteArray()));
+        kafkaTemplate.send(new ProducerRecord<>(REPROCESS_TOPIC, String.valueOf(message.getChecksum()), outputStream.toByteArray()));
     }
 }
 

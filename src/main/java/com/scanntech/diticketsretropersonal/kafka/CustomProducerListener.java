@@ -39,6 +39,7 @@ public class CustomProducerListener implements ProducerListener<String, byte[]> 
     @Override
     public void onError(ProducerRecord<String, byte[]> producerRecord, @Nullable RecordMetadata recordMetadata, Exception exception) {
         try {
+            log.error("Producer record failed to send: {}", exception.getMessage());
             this.saveToStatus(MovementStatus.ERROR, producerRecord);
         } catch (IOException e) {
             throw new RuntimeException(e);

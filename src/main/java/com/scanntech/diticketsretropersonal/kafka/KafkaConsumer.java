@@ -1,5 +1,6 @@
 package com.scanntech.diticketsretropersonal.kafka;
 
+import com.scanntech.di.commons.kafka.avro.model.MovimientoAv;
 import com.scanntech.di.commons.kafka.avro.model.TransaccionPendienteAv;
 import com.scanntech.diticketsretropersonal.service.TicketsRetroService;
 import org.apache.logging.log4j.LogManager;
@@ -23,11 +24,10 @@ public class KafkaConsumer {
     @KafkaListener(id = "grupo", groupId = "grupo", topics = "${kafka.retro-topic:trn-tickets-retro}",
             containerFactory = "kafkaListenerContainerFactory")
     public void listen(@Payload List<TransaccionPendienteAv> data) throws IOException {
-//        List<TransaccionPendienteAv> filtered = data.stream().filter(
-//                tr -> tr.getObjetoApi() instanceof MovimientoAv
-//        ).toList();
-//        log.info(filtered.toString());
-        log.info("About to save %d movements".formatted(data.size()));
-        this.service.saveNewMovements(data);
+        List<TransaccionPendienteAv> filtered = data.stream().filter(
+                tr -> tr.getObjetoApi() instanceof MovimientoAv
+        ).toList();
+        log.info("About to save %d movements".formatted(filtered.size()));
+        this.service.saveNewMovements(filtered);
     }
 }

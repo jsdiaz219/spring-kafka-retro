@@ -2,11 +2,11 @@ spring:
   application:
     name: avro-tutorial
 kafka:
-  retro-topic: trn-tickets-retro
-  reprocess-topic: trn-tickets-retro-reprocess
-  bootstrap-servers: localhost:9092
+  retro-topic: trn-pendientes-descartar
+  reprocess-topic: trn-pendientes-bkppgiposbr14-test-retro
+  bootstrap-servers: 192.168.1.156:9092
   consumer:
     concurrency: 3
     poll-timeout: 3000
-    max-poll-records: 3000
+    max-poll-records: 1000
     batch-listener: true

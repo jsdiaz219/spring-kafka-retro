@@ -20,7 +20,7 @@ public class MovementsUtil {
         LocalDate commercialDate = getDateFromString(transactionMovement.getFecha().toString());
         assert commercialDate != null;
         String month = String.valueOf(commercialDate.getMonth().getValue());
-        String year = String.valueOf(commercialDate.getMonth().getValue());
+        String year = String.valueOf(commercialDate.getYear());
         String company = String.valueOf(movement.getEmpresa());
         String jsonbArgumentsString = movement.getJsonbArguments().toString();
         ObjectMapper mapper = new ObjectMapper();

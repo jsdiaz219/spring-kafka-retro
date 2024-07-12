@@ -85,6 +85,7 @@ public class MovementsRepo implements IMovementsRepo{
         return movements;
     }
 
+    // mes-anio/empresa/{pendiente/error/finalizado}/local.avro
     private List<TransaccionPendienteAv> readMovementsFromFile(File file) throws IOException {
         List<TransaccionPendienteAv> movements = new ArrayList<>();
         DatumReader<TransaccionPendienteAv> userDatumReader = new SpecificDatumReader<>(TransaccionPendienteAv.class);
@@ -95,7 +96,7 @@ public class MovementsRepo implements IMovementsRepo{
                 movements.add(movement);
             }
         }
-
+        file.delete();
         return movements;
     }
 
